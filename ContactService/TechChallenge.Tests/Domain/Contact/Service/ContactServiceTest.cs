@@ -1,5 +1,11 @@
 ﻿using Moq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using TechChallenge.Contact.Domain.Region.Exception;
+using TechChallenge.Contact.Integration.Region;
+using TechChallenge.Contact.Integration.Region.Dto;
+using TechChallenge.Contact.Integration.Response;
+using TechChallenge.Contact.Integration.Service;
 using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Domain.Contact.Exception;
@@ -12,180 +18,227 @@ namespace TechChallenge.Tests.Domain.Contact.Service
     {
         private readonly Mock<IContactRepository> _contactRepositoryMock;
         private readonly Mock<ICacheRepository> _cacheRepositoryMock;
-        //private readonly Mock<IRegionService> _regionServiceMock;
         private readonly ContactService _contactServiceMock;
+        private readonly Mock<IIntegrationService> _integrationServiceMock;
+        private readonly Mock<IRegionIntegration> _regionIntegrationMock;
 
         public ContactServiceTest()
         {
             _contactRepositoryMock = new Mock<IContactRepository>();
             _cacheRepositoryMock = new Mock<ICacheRepository>();
-            //_regionServiceMock = new Mock<IRegionService>();
-            _contactServiceMock = new ContactService(_contactRepositoryMock.Object, _cacheRepositoryMock.Object);//, _regionServiceMock.Object);
+            _integrationServiceMock = new Mock<IIntegrationService>();
+            _regionIntegrationMock = new Mock<IRegionIntegration>();
+
+            _contactServiceMock = new ContactService(_contactRepositoryMock.Object, _cacheRepositoryMock.Object, _integrationServiceMock.Object, _regionIntegrationMock.Object);
         }
 
-        //[Fact(DisplayName = "Should Create A New Contact With Success")]
-        //public async Task ShouldCreateANewContactWithSuccess()
-        //{
-        //    var mockRegionId = Guid.NewGuid();
-        //    var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
+        [Fact(DisplayName = "Should Create A New Contact With Success")]
 
-        //    _regionServiceMock.Setup(rs => rs.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new RegionEntity("SP", "11"));
+        public async Task ShouldCreateANewContactWithSuccess()
+        {
+            var mockRegionId = Guid.NewGuid();
 
-        //    await _contactServiceMock.CreateAsync(contact);
+            var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
 
-        //    _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Once);
-        //    _regionServiceMock.Verify(rs => rs.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //}
+            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(mockRegionId);
 
-        //[Fact(DisplayName = "Should Create Return Exception When Region Does Not Exists")]
-        //public async Task ShouldCreateReturnExceptionWhenRegionDoesNotExists()
-        //{
-        //    var mockRegionId = Guid.NewGuid();
-        //    var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
+            _integrationServiceMock
+                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
 
-        //    _regionServiceMock.Setup(rs => rs.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((RegionEntity)null);
+            await _contactServiceMock.CreateAsync(contact);
 
-        //    await Assert.ThrowsAsync<RegionNotFoundException>(
-        //      () => _contactServiceMock.CreateAsync(contact));
+            _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
 
-        //    _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Never);
-        //    _regionServiceMock.Verify(rs => rs.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //}
+        }
 
-        //[Fact(DisplayName = "Should Update Throw Exception When Contact Does Not Exist")]
-        //public async Task ShouldUpdateThrowExceptionWhenContactDoesNotExist()
-        //{
-        //    _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ContactEntity)null);
+        [Fact(DisplayName = "Should Create Return Exception When Region Does Not Exists")]
+        public async Task ShouldCreateReturnExceptionWhenRegionDoesNotExists()
+        {
+            var mockRegionId = Guid.NewGuid();
+            var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
 
-        //    var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            _integrationServiceMock
+           .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
+           .ReturnsAsync((BaseResponseDto<RegionGetDto>)null);
 
-        //    _regionServiceMock.Setup(rs => rs.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new RegionEntity("SP", "11"));
+            await Assert.ThrowsAsync<RegionNotFoundException>(
+              () => _contactServiceMock.CreateAsync(contact));
 
-        //    await Assert.ThrowsAsync<ContactNotFoundException>(
-        //        () => _contactServiceMock.UpdateAsync(contact));
+            _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Never);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
 
-        //    _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
-        //    _regionServiceMock.Verify(rs => rs.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
-        //    _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //}
+        }
 
+        [Fact(DisplayName = "Should Update Throw Exception When Contact Does Not Exist")]
+        public async Task ShouldUpdateThrowExceptionWhenContactDoesNotExist()
+        {
+            _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ContactEntity)null);
 
-        //[Fact(DisplayName = "Should Update Throw Exception When Region Does Not Exist")]
-        //public async Task ShouldUpdateThrowExceptionWhenRegionDoesNotExist()
-        //{
-        //    _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new ContactEntity("Paul", "41410303", "email@mock.com", Guid.NewGuid()));
+            var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
 
-        //    var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(contact.RegionId);
 
-        //    _regionServiceMock.Setup(rs => rs.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((RegionEntity)null);
+            _integrationServiceMock
+                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
 
-        //    await Assert.ThrowsAsync<RegionNotFoundException>(
-        //        () => _contactServiceMock.UpdateAsync(contact));
+            await Assert.ThrowsAsync<ContactNotFoundException>(
+                () => _contactServiceMock.UpdateAsync(contact));
 
-        //    _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //    _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
-        //    _regionServiceMock.Verify(rs => rs.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //}
-
-        //[Fact(DisplayName = "Should Update When Contact Exist")]
-        //public async Task ShouldUpdateWhenContactExist()
-        //{
-        //    var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
-
-        //    _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(contactMock);
-        //    _regionServiceMock.Setup(rs => rs.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new RegionEntity("SP", "11"));
-
-        //    await _contactServiceMock.UpdateAsync(contactMock);
-
-        //    _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Once);
-        //    _regionServiceMock.Verify(rs => rs.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //    _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        //}
-
-        //[Fact(DisplayName = "Should Delete Contact Updating Delete Flag")]
-        //public async Task ShouldDeleteContactUpdatingDeleteFlag()
-        //{
-        //    var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
-        //    var IdMock = Guid.NewGuid();
-
-        //    _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(contactMock);
-
-        //    await _contactServiceMock.RemoveByIdAsync(IdMock);
-
-        //    _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Once);
-        //}
-
-        //[Fact(DisplayName = "Should Delete Throw Exception When Contact Does Not Exist")]
-        //public async Task ShouldRemoveThrowExceptionWhenContactDoesNotExist()
-        //{
-        //    _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ContactEntity)null);
-
-        //    var idMock = Guid.NewGuid();
-
-        //    await Assert.ThrowsAsync<ContactNotFoundException>(
-        //        () => _contactServiceMock.RemoveByIdAsync(idMock));
-
-        //    _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
-        //}
-
-        //[Fact(DisplayName = "Should GetById Return Contact")]
-        //public async Task ShouldGetByIdReturnContact()
-        //{
-        //    var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
-        //    var IdMock = Guid.NewGuid();
-
-        //    _cacheRepositoryMock.Setup(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()))
-        //                       .ReturnsAsync(contactMock);
-
-        //    await _contactServiceMock.GetByIdAsync(IdMock);
-
-        //    _cacheRepositoryMock.Verify(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()), Times.Once);
-        //}
-
-        //[Fact(DisplayName = "Should GetById Throw Exception When Contact Does Not Exist")]
-        //public async Task ShouldGetByIdThrowExceptionWhenContactDoesNotExist()
-        //{
-        //    var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
-        //    var IdMock = Guid.NewGuid();
+            _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Never);
+            _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
+        }
 
 
-        //    _cacheRepositoryMock.Setup(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()))
-        //                       .ReturnsAsync((ContactEntity)null);
+        [Fact(DisplayName = "Should Update Throw Exception When Region Does Not Exist")]
+        public async Task ShouldUpdateThrowExceptionWhenRegionDoesNotExist()
+        {
+            _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new ContactEntity("Paul", "41410303", "email@mock.com", Guid.NewGuid()));
+
+            var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+
+            _integrationServiceMock
+                            .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
+                            .ReturnsAsync((BaseResponseDto<RegionGetDto>)null);
+
+            await Assert.ThrowsAsync<RegionNotFoundException>(
+                () => _contactServiceMock.UpdateAsync(contact));
+
+            _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
+            _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should Update When Contact Exist")]
+        public async Task ShouldUpdateWhenContactExist()
+        {
+            var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+
+            _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(contactMock);
+
+            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(contactMock.RegionId);
+
+            _integrationServiceMock
+                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
+
+
+            await _contactServiceMock.UpdateAsync(contactMock);
+
+            _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+            _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should Delete Contact Updating Delete Flag")]
+        public async Task ShouldDeleteContactUpdatingDeleteFlag()
+        {
+            var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            var IdMock = Guid.NewGuid();
+
+            _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(contactMock);
+
+            await _contactServiceMock.RemoveByIdAsync(IdMock);
+
+            _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should Delete Throw Exception When Contact Does Not Exist")]
+        public async Task ShouldRemoveThrowExceptionWhenContactDoesNotExist()
+        {
+            _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ContactEntity)null);
+
+            var idMock = Guid.NewGuid();
+
+            await Assert.ThrowsAsync<ContactNotFoundException>(
+                () => _contactServiceMock.RemoveByIdAsync(idMock));
+
+            _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
+        }
+
+        [Fact(DisplayName = "Should GetById Return Contact")]
+        public async Task ShouldGetByIdReturnContact()
+        {
+            var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            var IdMock = Guid.NewGuid();
+
+            _cacheRepositoryMock.Setup(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()))
+                               .ReturnsAsync(contactMock);
+
+            await _contactServiceMock.GetByIdAsync(IdMock);
+
+            _cacheRepositoryMock.Verify(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should GetById Throw Exception When Contact Does Not Exist")]
+        public async Task ShouldGetByIdThrowExceptionWhenContactDoesNotExist()
+        {
+            var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            var IdMock = Guid.NewGuid();
+
+
+            _cacheRepositoryMock.Setup(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()))
+                               .ReturnsAsync((ContactEntity)null);
 
 
 
-        //    await Assert.ThrowsAsync<ContactNotFoundException>(
-        //                () => _contactServiceMock.GetByIdAsync(IdMock));
+            await Assert.ThrowsAsync<ContactNotFoundException>(
+                        () => _contactServiceMock.GetByIdAsync(IdMock));
 
-        //    _cacheRepositoryMock.Verify(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()), Times.Once);
-        //}
+            _cacheRepositoryMock.Verify(c => c.GetAsync<ContactEntity>(It.IsAny<string>(), It.IsAny<Func<Task<ContactEntity>>>()), Times.Once);
+        }
 
-        //[Fact(DisplayName = "Should GetAll Return List Of Contacts")]
-        //public async Task ShouldGetAllReturnListOfContacts()
-        //{
-        //    var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
-        //    var contactsList = new List<ContactEntity> { contactMock };
+        [Fact(DisplayName = "Should GetAll Return List Of Contacts")]
+        public async Task ShouldGetAllReturnListOfContacts()
+        {
+            var contactMock = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
+            var contactsList = new List<ContactEntity> { contactMock };
 
-        //    _contactRepositoryMock
-        //        .Setup(cr => cr.GetAllPagedAsync(
-        //                                   It.IsAny<Expression<Func<ContactEntity, bool>>>(),
-        //                                   It.IsAny<int>(),
-        //                                   It.IsAny<int>(),
-        //                                   It.IsAny<Expression<Func<ContactEntity, dynamic>>>()
-        //                               ))
-        //        .ReturnsAsync(contactsList);
+            _contactRepositoryMock
+                .Setup(cr => cr.GetAllPagedAsync(
+                                           It.IsAny<Expression<Func<ContactEntity, bool>>>(),
+                                           It.IsAny<int>(),
+                                           It.IsAny<int>(),
+                                           It.IsAny<Expression<Func<ContactEntity, dynamic>>>()
+                                       ))
+                .ReturnsAsync(contactsList);
 
-        //    var result = await _contactServiceMock.GetAllPagedAsync(5, 1);
+            var result = await _contactServiceMock.GetAllPagedAsync(5, 1);
 
-        //    _contactRepositoryMock.Verify(c => c.GetAllPagedAsync(
-        //                                   It.IsAny<Expression<Func<ContactEntity, bool>>>(),
-        //                                   It.IsAny<int>(),
-        //                                   It.IsAny<int>(),
-        //                                   It.IsAny<Expression<Func<ContactEntity, dynamic>>>()
-        //                               ), Times.Once);
+            _contactRepositoryMock.Verify(c => c.GetAllPagedAsync(
+                                           It.IsAny<Expression<Func<ContactEntity, bool>>>(),
+                                           It.IsAny<int>(),
+                                           It.IsAny<int>(),
+                                           It.IsAny<Expression<Func<ContactEntity, dynamic>>>()
+                                       ), Times.Once);
 
-        //    Assert.NotNull(result);
-        //    Assert.Equal(contactMock, result.First());
-        //}
+            Assert.NotNull(result);
+            Assert.Equal(contactMock, result.First());
+        }
+
+        #region Private Methods
+        private BaseResponseDto<RegionGetDto> GenerateFakeRegionServiceResponse(Guid mockRegionId)
+        {
+            var fakeRegionGetDto = new RegionGetDto
+            {
+                Id = mockRegionId,
+                Name = "São Paulo",
+                Ddd = "11"
+            };
+
+            var fakeBaseResponseDto = new BaseResponseDto<RegionGetDto>
+            {
+                Success = true,
+                Error = null,
+                Errors = Enumerable.Empty<string>(),
+                Data = fakeRegionGetDto
+            };
+
+            return fakeBaseResponseDto;
+        }
+        #endregion
     }
 }
