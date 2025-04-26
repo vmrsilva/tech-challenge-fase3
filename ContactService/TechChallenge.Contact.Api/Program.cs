@@ -1,10 +1,12 @@
 using FluentValidation.AspNetCore;
 using FluentValidation;
 using Prometheus.SystemMetrics;
-using TechChallenge.IoC;
 using AutoMapper;
 using TechChallenge.Contact.Api.Mapper;
 using Prometheus;
+using TechChallenge.IoC;
+using TechChallenge.Contact.Integration.Region;
+using Refit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,14 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+var regionApiUrl = builder.Configuration["Integrations:RegionApiUrl"];
+
+builder.Services.AddRefitClient<IRegionIntegration>().ConfigureHttpClient(c =>
+{
+    c.BaseAddress = new Uri(regionApiUrl);
+
+});
 
 builder.Services.AddSystemMetrics();
 

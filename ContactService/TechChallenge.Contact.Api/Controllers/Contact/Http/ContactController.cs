@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TechChallenge.Contact.Api.Controllers.Contact.Dto;
 using TechChallenge.Contact.Api.Response;
+using TechChallenge.Contact.Domain.Region.Exception;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Domain.Contact.Exception;
 using TechChallenge.Domain.Contact.Service;
@@ -37,14 +38,14 @@ namespace TechChallenge.Contact.Api.Controllers.Contact.Http
                     Error = string.Empty
                 });
             }
-            //catch (RegionNotFoundException ex)
-            //{
-            //    return StatusCode(400, new BaseResponse
-            //    {
-            //        Success = false,
-            //        Error = ex.Message
-            //    });
-            //}
+            catch (RegionNotFoundException ex)
+            {
+                return StatusCode(400, new BaseResponse
+                {
+                    Success = false,
+                    Error = ex.Message
+                });
+            }
             catch (Exception ex)
             {
                 return StatusCode(400, new BaseResponse

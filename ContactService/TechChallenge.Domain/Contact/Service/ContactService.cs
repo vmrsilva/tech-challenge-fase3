@@ -1,4 +1,9 @@
-﻿using TechChallenge.Domain.Cache;
+﻿using TechChallenge.Contact.Domain.Region.Exception;
+using TechChallenge.Contact.Integration.Region;
+using TechChallenge.Contact.Integration.Region.Dto;
+using TechChallenge.Contact.Integration.Response;
+using TechChallenge.Contact.Integration.Service;
+using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Domain.Contact.Exception;
 using TechChallenge.Domain.Contact.Repository;
@@ -9,24 +14,29 @@ namespace TechChallenge.Domain.Contact.Service
     {
         private readonly IContactRepository _contactRepository;
         private readonly ICacheRepository _cacheRepository;
-        //private readonly IRegionService _regionService;
+        private readonly IIntegrationService _integrationService;
+        private readonly IRegionIntegration _regionIntegration;
 
-        public ContactService(IContactRepository contactRepository, ICacheRepository cacheRepository)//, IRegionService regionService)
+
+        public ContactService(IContactRepository contactRepository, ICacheRepository cacheRepository,
+                              IIntegrationService integrationService, IRegionIntegration regionIntegration)
         {
             _contactRepository = contactRepository;
             _cacheRepository = cacheRepository;
-            //_regionService = regionService;
+            _integrationService = integrationService;
+            _regionIntegration = regionIntegration;
         }
 
         public async Task CreateAsync(ContactEntity contactEntity)
         {
-            //var regionDb = await _regionService.GetByIdAsync(contactEntity.RegionId);
+            //Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetById(contactEntity.RegionId); };
+            //var regionResponse = await _integrationService.SendResilientRequest(callApi);
+            var region = await GetRegionById(contactEntity.RegionId).ConfigureAwait(false);
 
-            //if (regionDb == null)
-            //    throw new RegionNotFoundException();
+            if (region == null)
+                throw new RegionNotFoundException();
 
-            //await _contactRepository.Create(contactEntity).ConfigureAwait(false);
-            throw new System.Exception("CreateAsync method is not implemented.");
+            await _contactRepository.Create(contactEntity).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<ContactEntity>> GetAllPagedAsync(int pageSize, int page)
@@ -36,7 +46,15 @@ namespace TechChallenge.Domain.Contact.Service
 
         public async Task<IEnumerable<ContactEntity>> GetByDddAsync(string ddd)
         {
-            return await _cacheRepository.GetAsync(ddd, async () => await _contactRepository.GetByDddAsync(ddd).ConfigureAwait(false));
+            Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetByDDD(ddd); };
+            var regionResponse = await _integrationService.SendResilientRequest(callApi);
+
+            if (!regionResponse?.Success ?? false)
+                throw new RegionNotFoundException();
+
+            var region = regionResponse.Data;
+
+            return await _cacheRepository.GetAsync(ddd, async () => await _contactRepository.GetByDddAsync(region.Id).ConfigureAwait(false));
         }
 
         public async Task<ContactEntity> GetByIdAsync(Guid id)
@@ -68,25 +86,36 @@ namespace TechChallenge.Domain.Contact.Service
 
         public async Task UpdateAsync(ContactEntity contact)
         {
-            //var contactDb = await _contactRepository.GetByIdAsync(contact.Id).ConfigureAwait(false);
+            var contactDb = await _contactRepository.GetByIdAsync(contact.Id).ConfigureAwait(false);
 
-            //if (contactDb == null)
-            //    throw new ContactNotFoundException();
+            if (contactDb == null)
+                throw new ContactNotFoundException();
 
-            //var regionDb = await _regionService.GetByIdAsync(contact.RegionId);
+            var region = await GetRegionById(contact.RegionId).ConfigureAwait(false);
 
-            //if (regionDb == null)
-            //    throw new RegionNotFoundException();
+            if (region == null)
+                throw new RegionNotFoundException();
 
-            //contactDb.Name = contact.Name;
-            //contactDb.Phone = contact.Phone;
-            //contactDb.Email = contact.Email;
-            //contactDb.RegionId = contact.RegionId;
+            contactDb.Name = contact.Name;
+            contactDb.Phone = contact.Phone;
+            contactDb.Email = contact.Email;
+            contactDb.RegionId = contact.RegionId;
 
-            //await _contactRepository.UpdateAsync(contact).ConfigureAwait(false);
-            throw new System.Exception("CreateAsync method is not implemented.");
+            await _contactRepository.UpdateAsync(contact).ConfigureAwait(false);
         }
 
+        #region Private Methods
 
+        private async Task<RegionGetDto> GetRegionById(Guid regionId)
+        {
+            Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetById(regionId); };
+            var regionResponse = await _integrationService.SendResilientRequest(callApi);
+
+            if (regionResponse?.Success ?? false)
+                return regionResponse.Data;
+            else
+                throw new RegionNotFoundException();
+        }
+        #endregion
     }
 }

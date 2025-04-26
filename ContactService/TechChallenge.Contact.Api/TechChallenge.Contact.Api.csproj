@@ -19,12 +19,15 @@
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
     <PackageReference Include="prometheus-net.DotNetRuntime" Version="4.4.1" />
     <PackageReference Include="prometheus-net.SystemMetrics" Version="3.1.0" />
+    <PackageReference Include="Refit" Version="8.0.0" />
+    <PackageReference Include="Refit.HttpClientFactory" Version="8.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TechChallenge.Domain\TechChallenge.Domain.csproj" />
-    <ProjectReference Include="..\TechChallenge.IoC\TechChallenge.IoC.csproj" />
+    <ProjectReference Include="..\TechChallenge.Contact.Integration\TechChallenge.Contact.Integration.csproj" />
+    <ProjectReference Include="..\TechChallenge.Domain\TechChallenge.Contact.Domain.csproj" />
+    <ProjectReference Include="..\TechChallenge.IoC\TechChallenge.Contact.IoC.csproj" />
   </ItemGroup>
 
 </Project>
