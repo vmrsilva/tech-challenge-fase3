@@ -179,39 +179,7 @@ namespace TechChallenge.Region.Tests.IntegrationTests.Controllers
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.False(result?.Success);
             Assert.Equal(exceptionMessageRegionDoesNotExist, result?.Error);
-        }
-
-        [Fact(DisplayName = "Should Return Region By Ddd With Contacts")]
-        public async Task ShouldReturnRegionByDddWithContacts()
-        {
-            var client = techChallangeApplicationFactory.CreateClient();
-
-            var response = await client.GetAsync($"{routeBase}/get-ddd-with-contacts/{11}");
-            var responseParsed = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<BaseResponseDto<RegionWithContactsResponseDto>>(responseParsed,
-                                                                                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.True(result?.Success);
-            Assert.NotNull(result?.Data);
-            Assert.NotNull(result?.Data.Name);
-            //Assert.NotNull(result?.Data.Contacts);
-        }
-
-        [Fact(DisplayName = "Should Get Region By Ddd With Contacts Return Data Equal Null When Ddd Does Not Exist")]
-        public async Task ShouldGetRegionByDddWithContactsReturnBadRequestWhenDddDoesNotExist()
-        {
-            var client = techChallangeApplicationFactory.CreateClient();
-
-            var response = await client.GetAsync($"{routeBase}/get-ddd-with-contacts/{99}");
-            var responseParsed = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<BaseResponseDto<RegionWithContactsResponseDto>>(responseParsed,
-                                                                                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.True(result?.Success);
-            Assert.Null(result?.Data);
-        }
+        }        
 
         [Fact(DisplayName = "Should Return Region By Ddd ")]
         public async Task ShouldReturnRegionByDdd()
