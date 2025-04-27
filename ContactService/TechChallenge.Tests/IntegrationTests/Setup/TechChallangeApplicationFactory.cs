@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Runtime.InteropServices;
 using TechChallenge.Contact.Integration.Service;
+using TechChallenge.Contact.Tests.Util;
 using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Infrastructure.Cache;
@@ -141,8 +142,8 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
 
         private void SeedRegion(TechChallangeContext context)
         {
-            var contactOne = new ContactEntity("Test", "4141-3338", "test@email.com", Guid.NewGuid());
-            var contactTwo = new ContactEntity("Test", "4747-4747", "test@email.com", Guid.NewGuid());
+            var contactOne = new ContactEntity("Test", "4141-3338", "test@email.com", Util.dddSp);
+            var contactTwo = new ContactEntity("Test", "4747-4747", "test@email.com", Util.dddPr);
             context.Contact.AddRange(contactOne, contactTwo);
 
             context.SaveChanges();
