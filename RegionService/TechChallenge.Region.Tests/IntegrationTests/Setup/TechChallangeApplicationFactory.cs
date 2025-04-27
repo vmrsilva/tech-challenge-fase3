@@ -124,10 +124,6 @@ namespace TechChallenge.Region.Tests.IntegrationTests.Setup
 
             context.Region.AddRange(regionOne, regionTow);
 
-            //var contactOne = new ContactEntity("Test", "4141-3338", "test@email.com", regionOne.Id);
-            //var contactTwo = new ContactEntity("Test", "4747-4747", "test@email.com", regionTow.Id);
-            //context.Contact.AddRange(contactOne, contactTwo);
-
             context.SaveChanges();
         }
     }
