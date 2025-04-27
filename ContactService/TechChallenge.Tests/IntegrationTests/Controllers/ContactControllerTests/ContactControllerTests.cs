@@ -56,7 +56,6 @@ namespace TechChallenge.Tests.IntegrationTests.Controllers.ContactControllerTest
             Assert.Equal(contactDb.Phone, contact.Phone);
         }
 
-
         [Fact(DisplayName = "Should Create Contact Return Bad Request When Region Does Not Exist")]
         public async Task ShouldCreateContactReturnBadRequestWhenRegionDoesNotExist()
         {
