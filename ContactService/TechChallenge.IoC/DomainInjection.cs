@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TechChallenge.Contact.Integration.Service;
 using TechChallenge.Domain.Base.Repository;
 using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Repository;
@@ -21,6 +22,7 @@ namespace TechChallenge.IoC
             //ConfigureRegion(services);
             ConfigureContact(services);
             ConfigureCache(services, configuration);
+            ConfigureIntegration(services);
         }
 
         public static void ConfigureContext(IServiceCollection services, IConfiguration configuration)
@@ -38,11 +40,6 @@ namespace TechChallenge.IoC
         {
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
         }
-        //public static void ConfigureRegion(IServiceCollection services)
-        //{
-        //    services.AddScoped<IRegionRepository, RegionRepository>();
-        //    services.AddScoped<IRegionService, RegionService>();
-        //}
 
         public static void ConfigureContact(IServiceCollection services)
         {
@@ -57,6 +54,11 @@ namespace TechChallenge.IoC
             });
             services.AddScoped<ICacheRepository, CacheRepository>();
             services.AddScoped<ICacheWrapper, CacheWrapper>();
+        }
+
+        private static void ConfigureIntegration(IServiceCollection services)
+        {
+            services.AddScoped<IIntegrationService, IntegrationService>();
         }
     }
 }

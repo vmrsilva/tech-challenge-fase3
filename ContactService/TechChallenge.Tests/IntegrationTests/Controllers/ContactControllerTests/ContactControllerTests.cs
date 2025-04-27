@@ -1,136 +1,191 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Moq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using TechChallenge.Contact.Api.Controllers.Contact.Dto;
-using TechChallenge.Contact.Api.Response;
+using TechChallenge.Contact.Integration.Region.Dto;
 using TechChallenge.Tests.IntegrationTests.Setup;
+using TechChallenge.Contact.Integration.Service;
+using TechChallenge.Contact.Tests.Util;
+using TechChallenge.Contact.Integration.Response;
+using TechChallenge.Contact.Api.Response;
 
 namespace TechChallenge.Tests.IntegrationTests.Controllers.ContactControllerTests
 {
     public class ContactControllerTests(TechChallangeApplicationFactory techChallangeApplicationFactory) : BaseIntegrationTest(techChallangeApplicationFactory)
-    {
+    {     
         const string defaultMessageExceptionRegion = "Região não encontrada na base dados.";
         const string defaultMessageExceptionContact = "Contato não encontrado na base de dados.";
         const string routeBase = "api/contact";
 
-        //[Fact(DisplayName = "Should Create New Contact With Success")]
-        //public async Task ShouldCreateNewContactWithSuccess()
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
-        //    var regionEntity = await _dbContext.Region.FirstOrDefaultAsync(r => r.Ddd == "11");
+        private readonly Mock<IIntegrationService> _integrationServiceMock;
 
-        //    var contact = new ContactCreateDto
-        //    {
-        //        Name = "Teste",
-        //        RegionId = regionEntity.Id,
-        //        Email = "newcontact@teste.com",
-        //        Phone = "36364141"
-        //    };
+        [Fact(DisplayName = "Should Create New Contact With Success")]
+        public async Task ShouldCreateNewContactWithSuccess()
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
 
-        //    var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
-        //    var response = await client.PostAsync($"{routeBase}", content);
+            var integrationServiceMock = techChallangeApplicationFactory.GetIntegrationServiceMock();
+            var regionId = Guid.NewGuid();            
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            var regionResponseMock = Util.GenerateFakeRegionServiceResponse(regionId);
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<RegionResponseDto>>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            integrationServiceMock
+                .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                .ReturnsAsync(regionResponseMock);
 
-        //    var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
+            var contact = new ContactCreateDto
+            {
+                Name = "Teste",
+                RegionId = regionResponseMock.Data.Id,
+                Email = "newcontact@teste.com",
+                Phone = "36364141"
+            };                               
 
-        //    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        //    Assert.Equal(contactDb.Name, contact.Name);
-        //    Assert.Equal(contactDb.Email, contact.Email);
-        //    Assert.Equal(contactDb.Phone, contact.Phone);
-        //}
+            var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync($"{routeBase}", content);
+
+            var responseParsed = await response.Content.ReadAsStringAsync();
+
+            var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.Equal(contactDb.Name, contact.Name);
+            Assert.Equal(contactDb.Email, contact.Email);
+            Assert.Equal(contactDb.Phone, contact.Phone);
+        }
 
 
-        //[Fact(DisplayName = "Should Create Contact Return Bad Request When Region Does Not Exist")]
-        //public async Task ShouldCreateContactReturnBadRequestWhenRegionDoesNotExist()
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
+        [Fact(DisplayName = "Should Create Contact Return Bad Request When Region Does Not Exist")]
+        public async Task ShouldCreateContactReturnBadRequestWhenRegionDoesNotExist()
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
 
-        //    var contact = new ContactCreateDto
-        //    {
-        //        Name = "Teste",
-        //        RegionId = Guid.NewGuid(),
-        //        Email = "newcontact@teste.com",
-        //        Phone = "36364141"
-        //    };
+            var integrationServiceMock = techChallangeApplicationFactory.GetIntegrationServiceMock();
 
-        //    var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
-        //    var response = await client.PostAsync($"{routeBase}", content);
+            var regionResponseMock = Util.GenerateFakeRegionServiceResponse(Guid.NewGuid());
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            integrationServiceMock
+                .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)null);
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<RegionResponseDto>>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var contact = new ContactCreateDto
+            {
+                Name = "Teste",
+                RegionId = Guid.NewGuid(),
+                Email = "newcontact@teste.com",
+                Phone = "36364141"
+            };
 
-        //    var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
+            var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync($"{routeBase}", content);
 
-        //    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        //    Assert.False(result.Success);
-        //    Assert.Equal(defaultMessageExceptionRegion, result.Error);
-        //}
+            var responseParsed = await response.Content.ReadAsStringAsync();
 
-        //[Theory(DisplayName = "Should Return Contacts By Ddd")]
-        //[InlineData("11")]
-        //[InlineData("47")]
-        //public async Task ShouldReturnContactsByDdd(string ddd)
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
-        //    var regionDb = await _dbContext.Region.AsNoTracking().FirstOrDefaultAsync(r => r.Ddd == ddd);
+            var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<ContactResponseDto>>>(responseParsed,
+                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        //    var response = await client.GetAsync($"{routeBase}/by-ddd/{ddd}");
+            var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.False(result.Success);
+            Assert.Equal(defaultMessageExceptionRegion, result.Error);
+        }
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<ContactResponseDto>>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        [Theory(DisplayName = "Should Return Contacts By Ddd")]
+        [InlineData("11")]
+        [InlineData("47")]
+        public async Task ShouldReturnContactsByDdd(string ddd)
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
 
-        //    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        //    Assert.NotEmpty(result.Data);
-        //    Assert.Equal(regionDb.Id, result.Data.FirstOrDefault().RegionId);
-        //}
+            var integrationServiceMock = techChallangeApplicationFactory.GetIntegrationServiceMock();
 
-        //[Theory(DisplayName = "Should Return Contact By Id")]
-        //[InlineData("11")]
-        //[InlineData("47")]
-        //public async Task ShouldReturnContactById(string ddd)
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
-        //    var regionDb = await _dbContext.Region.AsNoTracking().FirstOrDefaultAsync(r => r.Ddd == ddd);
+            var regionResponseMock = Util.GenerateFakeRegionServiceResponse(GetRegionIdFake(ddd), ddd);
 
-        //    var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.RegionId == regionDb.Id);
+            integrationServiceMock
+                .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                .ReturnsAsync(regionResponseMock);
 
-        //    var response = await client.GetAsync($"{routeBase}/by-id/{contactDb.Id}");
+            var contact = new ContactCreateDto
+            {
+                Name = "Teste",
+                RegionId = GetRegionIdFake(ddd),
+                Email = "newcontact@teste.com",
+                Phone = "36364141"
+            };
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            var response = await client.GetAsync($"{routeBase}/by-ddd/{ddd}");
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<ContactResponseDto>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var responseParsed = await response.Content.ReadAsStringAsync();
 
-        //    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        //    Assert.NotNull(result.Data);
-        //    Assert.Equal(contactDb.Id, result.Data.Id);
-        //}
+            var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<ContactResponseDto>>>(responseParsed,
+                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        //[Fact(DisplayName = "Should Get By Id Return Bad Request When It Does Not Exist")]
-        //public async Task ShouldGetByIdReturnBadRequestWhenItDoesNotExist()
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotEmpty(result.Data);
+            Assert.Equal(regionResponseMock.Data.Id, result.Data.FirstOrDefault().RegionId);
+        }
 
-        //    var response = await client.GetAsync($"{routeBase}/by-id/{Guid.NewGuid()}");
+        [Theory(DisplayName = "Should Return Contact By Id")]
+        [InlineData("11")]
+        [InlineData("47")]
+        public async Task ShouldReturnContactById(string ddd)
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            var integrationServiceMock = techChallangeApplicationFactory.GetIntegrationServiceMock();
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<ContactResponseDto>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var regionResponseMock = Util.GenerateFakeRegionServiceResponse(GetRegionIdFake(ddd), ddd);
 
-        //    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        //    Assert.Null(result.Data);
-        //    Assert.False(result.Success);
-        //    Assert.Equal(defaultMessageExceptionContact, result.Error);
-        //}
+            integrationServiceMock
+                .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                .ReturnsAsync(regionResponseMock);
+
+            var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.RegionId == regionResponseMock.Data.Id);
+
+            var response = await client.GetAsync($"{routeBase}/by-id/{contactDb.Id}");
+
+            var responseParsed = await response.Content.ReadAsStringAsync();
+
+            var result = JsonSerializer.Deserialize<BaseResponseDto<ContactResponseDto>>(responseParsed,
+                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Equal(contactDb.Id, result.Data.Id);
+        }
+
+        [Fact(DisplayName = "Should Get By Id Return Bad Request When It Does Not Exist")]
+        public async Task ShouldGetByIdReturnBadRequestWhenItDoesNotExist()
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
+
+            var response = await client.GetAsync($"{routeBase}/by-id/{Guid.NewGuid()}");
+
+            var responseParsed = await response.Content.ReadAsStringAsync();
+
+            var result = JsonSerializer.Deserialize<BaseResponseDto<ContactResponseDto>>(responseParsed,
+                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Null(result.Data);
+            Assert.False(result.Success);
+            Assert.Equal(defaultMessageExceptionContact, result.Error);
+        }
+
+        private Guid GetRegionIdFake(string ddd)
+        {
+            switch (ddd)
+            {
+                case "47":
+                    return Util.dddPr;
+                    
+                default:
+                    return Util.dddSp;
+                    
+            }
+        }
     }
 }

@@ -11,7 +11,7 @@ namespace TechChallenge.Domain.Contact.Repository
 
         Task<ContactEntity> GetByIdAsync(Guid id);
 
-        Task<IEnumerable<ContactEntity>> GetByDddAsync(string ddd);
+        Task<IEnumerable<ContactEntity>> GetByDddAsync(Guid regionId);
 
         Task<IEnumerable<ContactEntity>> GetAllPagedAsync(Expression<Func<ContactEntity, bool>> search, int pageSize, int page, Expression<Func<ContactEntity, dynamic>> orderDesc);
 

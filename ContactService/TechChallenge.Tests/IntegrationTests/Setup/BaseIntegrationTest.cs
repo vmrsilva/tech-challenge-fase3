@@ -12,8 +12,7 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
     public class BaseIntegrationTest : IClassFixture<TechChallangeApplicationFactory>, IDisposable
     {
         private readonly IServiceScope _scope;
-        protected readonly JsonSerializerOptions _jsonSerializerOptions;
-        //protected readonly IRegionService _regionService;
+        protected readonly JsonSerializerOptions _jsonSerializerOptions;        
         protected readonly TechChallangeContext _dbContext;
 
         public BaseIntegrationTest(TechChallangeApplicationFactory factory)
@@ -25,7 +24,7 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
 
             _scope = factory.Services.CreateScope();
             _dbContext = _scope.ServiceProvider.GetRequiredService<TechChallangeContext>();
-           // _regionService = _scope.ServiceProvider.GetRequiredService<IRegionService>();
+           
         }
 
         public void Dispose()

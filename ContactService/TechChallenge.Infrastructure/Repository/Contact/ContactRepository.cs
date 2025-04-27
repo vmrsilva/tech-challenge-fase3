@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using TechChallenge.Domain.Base.Repository;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Domain.Contact.Repository;
@@ -27,17 +28,15 @@ namespace TechChallenge.Infrastructure.Repository.Contact
             return await _baseRepository.GetPagedAsync(search, pageSize, page, orderDesc).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<ContactEntity>> GetByDddAsync(string ddd)
+        public async Task<IEnumerable<ContactEntity>> GetByDddAsync(Guid regionId)
         {
-            throw new System.Exception("GetByDddAsync method is not implemented.");
-            //using (_techChallangeContext)
-            //{
-            //    var contacts = await _techChallangeContext.Contact
-            //        .Where(c => c.Region.Ddd == ddd && !c.IsDeleted && !c.Region.IsDeleted)
-            //        .ToListAsync();
 
-            //    return contacts;
-            //}
+            using (_techChallangeContext)
+            {
+                var contacts = await _techChallangeContext.Contact.Where(c => c.RegionId == regionId && !c.IsDeleted).ToListAsync();
+
+                return contacts;
+            }
         }
 
         public async Task<ContactEntity> GetByIdAsync(Guid id)
