@@ -1,11 +1,11 @@
 ﻿using Moq;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using TechChallenge.Contact.Domain.Region.Exception;
 using TechChallenge.Contact.Integration.Region;
 using TechChallenge.Contact.Integration.Region.Dto;
 using TechChallenge.Contact.Integration.Response;
 using TechChallenge.Contact.Integration.Service;
+using TechChallenge.Contact.Tests.Util;
 using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Domain.Contact.Exception;
@@ -40,16 +40,16 @@ namespace TechChallenge.Tests.Domain.Contact.Service
 
             var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
 
-            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(mockRegionId);
+            var fakeBaseResponseDto = Util.GenerateFakeRegionServiceResponse(mockRegionId);
 
             _integrationServiceMock
-                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
-                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
+                 .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
 
             await _contactServiceMock.CreateAsync(contact);
 
             _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Once);
-            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()), Times.Once);
 
         }
 
@@ -60,14 +60,14 @@ namespace TechChallenge.Tests.Domain.Contact.Service
             var contact = new ContactEntity("Test", "12345678", "mail@test.com", mockRegionId);
 
             _integrationServiceMock
-           .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
-           .ReturnsAsync((BaseResponseDto<RegionGetDto>)null);
+           .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+           .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)null);
 
             await Assert.ThrowsAsync<RegionNotFoundException>(
               () => _contactServiceMock.CreateAsync(contact));
 
             _contactRepositoryMock.Verify(cr => cr.Create(It.IsAny<ContactEntity>()), Times.Never);
-            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()), Times.Once);
 
         }
 
@@ -78,17 +78,17 @@ namespace TechChallenge.Tests.Domain.Contact.Service
 
             var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
 
-            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(contact.RegionId);
+            var fakeBaseResponseDto = Util.GenerateFakeRegionServiceResponse(contact.RegionId);
 
             _integrationServiceMock
-                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
-                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
+                 .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
 
             await Assert.ThrowsAsync<ContactNotFoundException>(
                 () => _contactServiceMock.UpdateAsync(contact));
 
             _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
-            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Never);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()), Times.Never);
             _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
         }
 
@@ -101,15 +101,15 @@ namespace TechChallenge.Tests.Domain.Contact.Service
             var contact = new ContactEntity("Test", "12345678", "mail@test.com", Guid.NewGuid());
 
             _integrationServiceMock
-                            .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
-                            .ReturnsAsync((BaseResponseDto<RegionGetDto>)null);
+                            .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                            .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)null);
 
             await Assert.ThrowsAsync<RegionNotFoundException>(
                 () => _contactServiceMock.UpdateAsync(contact));
 
             _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
             _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Never);
-            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()), Times.Once);
         }
 
         [Fact(DisplayName = "Should Update When Contact Exist")]
@@ -119,17 +119,17 @@ namespace TechChallenge.Tests.Domain.Contact.Service
 
             _contactRepositoryMock.Setup(cr => cr.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(contactMock);
 
-            var fakeBaseResponseDto = GenerateFakeRegionServiceResponse(contactMock.RegionId);
+            var fakeBaseResponseDto = Util.GenerateFakeRegionServiceResponse(contactMock.RegionId);
 
             _integrationServiceMock
-                 .Setup(x => x.SendResilientRequest<BaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()))
-                 .ReturnsAsync((BaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
+                 .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                 .ReturnsAsync((IntegrationBaseResponseDto<RegionGetDto>)fakeBaseResponseDto);
 
 
             await _contactServiceMock.UpdateAsync(contactMock);
 
             _contactRepositoryMock.Verify(cr => cr.UpdateAsync(It.IsAny<ContactEntity>()), Times.Once);
-            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<BaseResponseDto<RegionGetDto>>>>()), Times.Once);
+            _integrationServiceMock.Verify(ins => ins.SendResilientRequest(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()), Times.Once);
             _contactRepositoryMock.Verify(cr => cr.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
         }
 
@@ -219,26 +219,6 @@ namespace TechChallenge.Tests.Domain.Contact.Service
             Assert.Equal(contactMock, result.First());
         }
 
-        #region Private Methods
-        private BaseResponseDto<RegionGetDto> GenerateFakeRegionServiceResponse(Guid mockRegionId)
-        {
-            var fakeRegionGetDto = new RegionGetDto
-            {
-                Id = mockRegionId,
-                Name = "São Paulo",
-                Ddd = "11"
-            };
-
-            var fakeBaseResponseDto = new BaseResponseDto<RegionGetDto>
-            {
-                Success = true,
-                Error = null,
-                Errors = Enumerable.Empty<string>(),
-                Data = fakeRegionGetDto
-            };
-
-            return fakeBaseResponseDto;
-        }
-        #endregion
+ 
     }
 }

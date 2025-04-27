@@ -1,6 +1,6 @@
 ﻿namespace TechChallenge.Contact.Integration.Response
 {
-    public record BaseResponse
+    public record IntegrationBaseResponse
     {
         public bool Success { get; init; }
         public string Error { get; init; }

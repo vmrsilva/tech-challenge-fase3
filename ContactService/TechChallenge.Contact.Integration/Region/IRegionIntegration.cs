@@ -7,9 +7,9 @@ namespace TechChallenge.Contact.Integration.Region
     public interface IRegionIntegration
     {
         [Get("/Region/get-by-id/{id}")]
-        Task<BaseResponseDto<RegionGetDto>> GetById(Guid id);
+        Task<IntegrationBaseResponseDto<RegionGetDto>> GetById(Guid id);
 
         [Get("/Region/get-by-ddd/{ddd}")]
-        Task<BaseResponseDto<RegionGetDto>> GetByDDD(string ddd);
+        Task<IntegrationBaseResponseDto<RegionGetDto>> GetByDDD(string ddd);
     }
 }

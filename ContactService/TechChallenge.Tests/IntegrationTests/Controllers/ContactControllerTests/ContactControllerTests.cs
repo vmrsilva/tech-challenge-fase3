@@ -1,48 +1,61 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Moq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using TechChallenge.Contact.Api.Controllers.Contact.Dto;
 using TechChallenge.Contact.Api.Response;
+using TechChallenge.Contact.Integration.Region.Dto;
+using TechChallenge.Contact.Integration.Region;
 using TechChallenge.Tests.IntegrationTests.Setup;
+using TechChallenge.Contact.Integration.Service;
+using TechChallenge.Contact.Tests.Util;
+using TechChallenge.Contact.Integration.Response;
 
 namespace TechChallenge.Tests.IntegrationTests.Controllers.ContactControllerTests
 {
     public class ContactControllerTests(TechChallangeApplicationFactory techChallangeApplicationFactory) : BaseIntegrationTest(techChallangeApplicationFactory)
-    {
+    {     
         const string defaultMessageExceptionRegion = "Região não encontrada na base dados.";
         const string defaultMessageExceptionContact = "Contato não encontrado na base de dados.";
         const string routeBase = "api/contact";
 
-        //[Fact(DisplayName = "Should Create New Contact With Success")]
-        //public async Task ShouldCreateNewContactWithSuccess()
-        //{
-        //    var client = techChallangeApplicationFactory.CreateClient();
-        //    var regionEntity = await _dbContext.Region.FirstOrDefaultAsync(r => r.Ddd == "11");
+        private readonly Mock<IIntegrationService> _integrationServiceMock;
 
-        //    var contact = new ContactCreateDto
-        //    {
-        //        Name = "Teste",
-        //        RegionId = regionEntity.Id,
-        //        Email = "newcontact@teste.com",
-        //        Phone = "36364141"
-        //    };
+        [Fact(DisplayName = "Should Create New Contact With Success")]
+        public async Task ShouldCreateNewContactWithSuccess()
+        {
+            var client = techChallangeApplicationFactory.CreateClient();
 
-        //    var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
-        //    var response = await client.PostAsync($"{routeBase}", content);
+            var integrationServiceMock = techChallangeApplicationFactory.GetIntegrationServiceMock();
+            var regionId = Guid.NewGuid();            
 
-        //    var responseParsed = await response.Content.ReadAsStringAsync();
+            var regionResponseMock = Util.GenerateFakeRegionServiceResponse(regionId);
 
-        //    var result = JsonSerializer.Deserialize<BaseResponseDto<IEnumerable<RegionResponseDto>>>(responseParsed,
-        //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            integrationServiceMock
+                .Setup(x => x.SendResilientRequest<IntegrationBaseResponseDto<RegionGetDto>>(It.IsAny<Func<Task<IntegrationBaseResponseDto<RegionGetDto>>>>()))
+                .ReturnsAsync(regionResponseMock);
 
-        //    var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
+            var contact = new ContactCreateDto
+            {
+                Name = "Teste",
+                RegionId = regionResponseMock.Data.Id,
+                Email = "newcontact@teste.com",
+                Phone = "36364141"
+            };                               
 
-        //    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        //    Assert.Equal(contactDb.Name, contact.Name);
-        //    Assert.Equal(contactDb.Email, contact.Email);
-        //    Assert.Equal(contactDb.Phone, contact.Phone);
-        //}
+            var content = new StringContent(JsonSerializer.Serialize(contact), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync($"{routeBase}", content);
+
+            var responseParsed = await response.Content.ReadAsStringAsync();
+
+            var contactDb = await _dbContext.Contact.AsNoTracking().FirstOrDefaultAsync(r => r.Phone == contact.Phone);
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.Equal(contactDb.Name, contact.Name);
+            Assert.Equal(contactDb.Email, contact.Email);
+            Assert.Equal(contactDb.Phone, contact.Phone);
+        }
 
 
         //[Fact(DisplayName = "Should Create Contact Return Bad Request When Region Does Not Exist")]

@@ -29,8 +29,6 @@ namespace TechChallenge.Domain.Contact.Service
 
         public async Task CreateAsync(ContactEntity contactEntity)
         {
-            //Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetById(contactEntity.RegionId); };
-            //var regionResponse = await _integrationService.SendResilientRequest(callApi);
             var region = await GetRegionById(contactEntity.RegionId).ConfigureAwait(false);
 
             if (region == null)
@@ -46,7 +44,7 @@ namespace TechChallenge.Domain.Contact.Service
 
         public async Task<IEnumerable<ContactEntity>> GetByDddAsync(string ddd)
         {
-            Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetByDDD(ddd); };
+            Func<Task<IntegrationBaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetByDDD(ddd); };
             var regionResponse = await _integrationService.SendResilientRequest(callApi);
 
             if (!regionResponse?.Success ?? false)
@@ -108,7 +106,7 @@ namespace TechChallenge.Domain.Contact.Service
 
         private async Task<RegionGetDto> GetRegionById(Guid regionId)
         {
-            Func<Task<BaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetById(regionId); };
+            Func<Task<IntegrationBaseResponseDto<RegionGetDto>>> callApi = () => { return _regionIntegration.GetById(regionId); };
             var regionResponse = await _integrationService.SendResilientRequest(callApi);
 
             if (regionResponse?.Success ?? false)

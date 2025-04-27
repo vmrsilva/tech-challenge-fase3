@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using System.Runtime.InteropServices;
+using TechChallenge.Contact.Integration.Service;
 using TechChallenge.Domain.Cache;
 using TechChallenge.Domain.Contact.Entity;
 using TechChallenge.Infrastructure.Cache;
@@ -18,8 +20,12 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
     {
         private readonly MsSqlContainer _msSqlContainer;
         private readonly RedisContainer _redisContainer;
+        private readonly Mock<IIntegrationService> _integrationServiceMock;
+
         public TechChallangeApplicationFactory()
         {
+            _integrationServiceMock = new Mock<IIntegrationService>();
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 _msSqlContainer = new MsSqlBuilder()
@@ -33,7 +39,7 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
                 _msSqlContainer = new MsSqlBuilder().Build();
             }
 
-            _redisContainer = new RedisBuilder().Build();
+            _redisContainer = new RedisBuilder().Build();            
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -42,6 +48,8 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
             {
                 ConfigureDbContext(services);
                 ConfigureCache(services);
+
+                MockServices(services);
             });
 
             //builder.UseEnvironment("Development");
@@ -75,8 +83,6 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
 
             });
 
-
-
             using (var serviceProvider = services.BuildServiceProvider())
             {
                 var dbContext = serviceProvider.GetRequiredService<TechChallangeContext>();
@@ -104,6 +110,17 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
             services.AddScoped<ICacheWrapper, CacheWrapper>();
         }
 
+        private void MockServices(IServiceCollection services)
+        {
+            var integration = services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(IIntegrationService));
+            if (integration != null)
+            {
+                services.Remove(integration);
+            }
+
+            services.AddSingleton<IIntegrationService>(_integrationServiceMock.Object);
+        }
+
         public async Task InitializeAsync()
         {
             await _msSqlContainer.StartAsync();
@@ -117,13 +134,13 @@ namespace TechChallenge.Tests.IntegrationTests.Setup
             await _redisContainer.StopAsync();
         }
 
+        public Mock<IIntegrationService> GetIntegrationServiceMock()
+        {
+            return _integrationServiceMock;
+        }
+
         private void SeedRegion(TechChallangeContext context)
         {
-            //var regionOne = new RegionEntity("SP", "11");
-            //var regionTow = new RegionEntity("SC", "47");
-
-            //context.Region.AddRange(regionOne, regionTow);
-
             var contactOne = new ContactEntity("Test", "4141-3338", "test@email.com", Guid.NewGuid());
             var contactTwo = new ContactEntity("Test", "4747-4747", "test@email.com", Guid.NewGuid());
             context.Contact.AddRange(contactOne, contactTwo);
