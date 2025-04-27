@@ -11,7 +11,7 @@ on:
 
 jobs:
   buildAndTest:
-    name: Build, Run Test and Build Docker Image
+    name: Contact Service
     runs-on: ubuntu-latest
 
     steps:
